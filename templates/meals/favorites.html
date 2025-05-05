@@ -1,0 +1,22 @@
+{% extends 'meals/index.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="meal-grid">
+        {% if favorites %}
+            {% for recipe in favorites %}
+                <div class="meal-card" onclick="window.location.href='{% url 'detail' recipe.id %}'">
+                    <h3 class="meal-title">{{ recipe.title }}</h3>
+                    <p class="meal-category">{{ recipe.category.name|default:"No category" }}</p>
+                    <div class="favorite-star active" 
+                         onclick="event.stopPropagation(); toggleFavorite(this, {{ recipe.id }})">
+                        ★
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <p>No favorite meals yet. Star some meals to see them here!</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

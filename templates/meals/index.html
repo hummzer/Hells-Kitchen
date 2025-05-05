@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Meal Planner</title>
+    <link href="https://fonts.googleapis.com/css2?family=Cabin:wght@400&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --card-color: #f8f9fa;
+            --text-color: #1c1c1e;
+            --accent-color: #007aff;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        @keyframes liquid-ripple {
+            0% { transform: scale(0); opacity: 0.8; }
+            100% { transform: scale(20); opacity: 0; }
+        }
+        
+        @keyframes fade-in-out {
+            0% { opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; }
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        
+        .container {
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+        
+        .navbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            background: white;
+            border-radius: 25px;
+            box-shadow: var(--shadow);
+            padding: 10px 15px;
+            z-index: 100;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .nav-item {
+            padding: 10px 15px;
+            text-decoration: none;
+            color: var(--text-color);
+            flex: 1;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .nav-item.active {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .meal-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 20px;
+        }
+        
+        .meal-card {
+            background: var(--card-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            transition: all 0.3s ease;
+            position: relative;
+            cursor: pointer;
+        }
+        
+        .meal-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+        
+        .favorite-star {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            font-size: 24px;
+            color: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .favorite-star.active {
+            color: gold;
+            text-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        
+        .meal-title {
+            margin: 0;
+            font-size: 18px;
+        }
+        
+        .meal-category {
+            color: #8e8e93;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        
+        .empty-state {
+            grid-column: 1 / -1;
+            text-align: center;
+            padding: 40px 0;
+            color: #8e8e93;
+            font-size: 21px;
+        }
+        
+        .intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            z-index: 1002;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .intro-text {
+            font-family: 'Cabin', sans-serif;
+            font-weight: 400;
+            font-size: 48px;
+            color: #8e8e93;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .modal-content {
+            background: var(--card-color);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 90%;
+            max-height: 80%;
+            overflow-y: auto;
+            box-shadow: var(--shadow);
+            position: relative;
+            width: 400px;
+        }
+        
+        .modal-close {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-color);
+        }
+        
+        .modal-title {
+            font-size: 22px;
+            margin: 0 0 10px;
+        }
+        
+        .modal-category {
+            color: #8e8e93;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        
+        .modal-instructions {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        
+        .modal-ingredients {
+            margin: 10px 0;
+            font-size: 16px;
+        }
+        
+        .modal-ingredients ul {
+            padding-left: 20px;
+            margin: 0;
+        }
+        
+        .modal-details {
+            color: #8e8e93;
+            font-size: 14px;
+            margin: 5px 0;
+        }
+        
+        .modal-error {
+            color: #ff3b30;
+            font-size: 16px;
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .modal-link {
+            color: var(--accent-color);
+            text-decoration: none;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="meal-grid">
+            {% if recipes %}
+                {% for recipe in recipes %}
+                    <div class="meal-card" onclick="window.location.href='{% url 'detail' recipe.id %}'">
+                        <h3 class="meal-title">{{ recipe.title }}</h3>
+                        <p class="meal-category">{{ recipe.category.name|default:"No category" }}</p>
+                        <div class="favorite-star {% if recipe.is_favorite %}active{% endif %}" 
+                             onclick="event.stopPropagation(); toggleFavorite(this, {{ recipe.id }})">
+                            ★
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <p>No meals available. Create your first meal!</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Modal for Choose Meal -->
+    <div class="modal" id="chooseModal">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeModal()">&times;</span>
+            <div id="modalContent"></div>
+        </div>
+    </div>
+    
+    <nav class="navbar">
+        <a href="{% url 'home' %}" class="nav-item {% if active_nav == 'home' %}active{% endif %}">Home</a>
+        <a href="{% url 'create' %}" class="nav-item {% if active_nav == 'create' %}active{% endif %}">Create</a>
+        <a href="{% url 'favorites' %}" class="nav-item {% if active_nav == 'favorites' %}active{% endif %}">Favorites</a>
+        <a href="#" class="nav-item {% if active_nav == 'choose' %}active{% endif %}" id="chooseNav">Choose</a>
+    </nav>
+    
+    <script>
+        // Text animations and liquid ripple effect on first visit
+        document.addEventListener('DOMContentLoaded', function() {
+            // Check if first visit
+            if (!localStorage.getItem('visited')) {
+                const overlay = document.createElement('div');
+                overlay.className = 'intro-overlay';
+                document.body.appendChild(overlay);
+
+                const text1 = document.createElement('div');
+                text1.className = 'intro-text';
+                text1.textContent = 'Made by yours truly...';
+                overlay.appendChild(text1);
+                text1.style.animation = 'fade-in-out 1.5s ease-in-out';
+
+                setTimeout(() => {
+                    text1.remove();
+                    const text2 = document.createElement('div');
+                    text2.className = 'intro-text';
+                    text2.textContent = 'ZAEH...';
+                    overlay.appendChild(text2);
+                    text2.style.animation = 'fade-in-out 1.5s ease-in-out';
+
+                    setTimeout(() => {
+                        text2.remove();
+                        const ripple = document.createElement('div');
+                        ripple.style.cssText = `
+                            position: absolute;
+                            width: 100px;
+                            height: 100px;
+                            background: rgba(0,0,0,0.4);
+                            border-radius: 50%;
+                            animation: liquid-ripple 3s ease-in-out;
+                            pointer-events: none;
+                            left: 50%;
+                            top: 50%;
+                            transform: translate(-50%, -50%);
+                        `;
+                        overlay.appendChild(ripple);
+                        setTimeout(() => {
+                            overlay.remove();
+                            localStorage.setItem('visited', 'true');
+                        }, 3000);
+                    }, 1500);
+                }, 1500);
+            }
+
+            // Handle Choose tab click
+            document.getElementById('chooseNav').addEventListener('click', async function(event) {
+                event.preventDefault(); // Prevent default navigation
+
+                // Update active nav
+                document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+                this.classList.add('active');
+
+                // Fetch random recipe
+                try {
+                    const response = await fetch('{% url 'choose' %}', {
+                        method: 'GET',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        }
+                    });
+                    
+                    const data = await response.json();
+                    const modalContent = document.getElementById('modalContent');
+                    const modal = document.getElementById('chooseModal');
+
+                    if (data.status === 'success') {
+                        const recipe = data.recipe;
+                        modalContent.innerHTML = `
+                            <h2 class="modal-title">${recipe.title}</h2>
+                            <p class="modal-category">${recipe.category}</p>
+                            <p class="modal-instructions"><strong>Instructions:</strong> ${recipe.instructions}</p>
+                            ${recipe.ingredients.length ? `
+                                <div class="modal-ingredients">
+                                    <strong>Ingredients:</strong>
+                                    <ul>
+                                        ${recipe.ingredients.map(ing => `<li>${ing}</li>`).join('')}
+                                    </ul>
+                                </div>
+                            ` : ''}
+                            <p class="modal-details"><strong>Portions:</strong> ${recipe.portions}</p>
+                            <p class="modal-details"><strong>Total Time:</strong> ${recipe.total_time} minutes</p>
+                            <a href="{% url 'detail' 0 %}".replace('0', recipe.id) class="modal-link">View Details</a>
+                            <a href="#" class="modal-link" onclick="document.getElementById('chooseNav').click()">Choose Another</a>
+                        `;
+                        modal.style.display = 'flex';
+                    } else {
+                        modalContent.innerHTML = `
+                            <p class="modal-error">${data.message}</p>
+                            <a href="{% url 'create' %}" class="modal-link">Create a Recipe</a>
+                        `;
+                        modal.style.display = 'flex';
+                    }
+                } catch (error) {
+                    const modalContent = document.getElementById('modalContent');
+                    modalContent.innerHTML = `
+                        <p class="modal-error">Error fetching meal. Please try again.</p>
+                    `;
+                    document.getElementById('chooseModal').style.display = 'flex';
+                }
+            });
+        });
+        
+        // Toggle favorite
+        async function toggleFavorite(star, recipeId) {
+            try {
+                const response = await fetch(`/meals/${recipeId}/favorite/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': getCsrfToken(),
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    star.classList.toggle('active');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+
+        // Get CSRF token
+        function getCsrfToken() {
+            const name = 'csrftoken';
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        // Close modal
+        function closeModal() {
+            document.getElementById('chooseModal').style.display = 'none';
+            // Reset active nav to Home if not on Choose tab
+            if (!document.getElementById('chooseNav').classList.contains('active')) {
+                document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+                document.querySelector('.nav-item[href="{% url 'home' %}"]').classList.add('active');
+            }
+        }
+    </script>
+</body>
+</html>

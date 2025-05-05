@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ recipe.title }} | Meal Planner</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --card-color: #f8f9fa;
+            --text-color: #1c1c1e;
+            --accent-color: #007aff;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        
+        .container {
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+        
+        .navbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            background: white;
+            border-radius: 25px;
+            box-shadow: var(--shadow);
+            padding: 10px 15px;
+            z-index: 100;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .nav-item {
+            padding: 10px 15px;
+            text-decoration: none;
+            color: var(--text-color);
+            flex: 1;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .nav-item.active {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .detail-card {
+            background: var(--card-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .detail-title {
+            margin-top: 0;
+            margin-bottom: 10px;
+        }
+        
+        .detail-meta {
+            color: #8e8e93;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .detail-section {
+            margin-bottom: 25px;
+        }
+        
+        .detail-section h2 {
+            font-size: 18px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 5px;
+        }
+        
+        .detail-section ul {
+            padding-left: 20px;
+        }
+        
+        .favorite-star {
+            font-size: 24px;
+            color: #e0e0e0;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .favorite-star.active {
+            color: gold;
+            text-shadow: 0 0 5px rgba(0,0,0,0.2);
+        }
+        
+        .cooked-form {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+        
+        .cooked-form input[type="text"] {
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            margin-right: 10px;
+        }
+        
+        .cooked-form input[type="submit"] {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="detail-card">
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <h1 class="detail-title">{{ recipe.title }}</h1>
+                <div class="favorite-star {% if recipe.is_favorite %}active{% endif %}" 
+                     onclick="toggleFavorite(this, {{ recipe.id }})">
+                    ★
+                </div>
+            </div>
+            
+            <div class="detail-meta">
+                <span>{{ recipe.category.name|default:"No category" }}</span>
+                <span>{{ recipe.portions }} portion{{ recipe.portions|pluralize }}</span>
+            </div>
+            
+            <div class="detail-section">
+                <h2>Time</h2>
+                <ul>
+                    <li>Prep time: {{ recipe.prep_time }}</li>
+                    <li>Cook time: {{ recipe.cook_time }}</li>
+                </ul>
+            </div>
+            
+            <div class="detail-section">
+                <h2>Ingredients</h2>
+                <ul>
+                    {% for ingredient in recipe.ingredient_set.all %}
+                        <li>{{ ingredient.quantity }} {{ ingredient.units }} {{ ingredient.item.name }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+            
+            <div class="detail-section">
+                <h2>Instructions</h2>
+                <div>{{ recipe.instructions|linebreaks }}</div>
+            </div>
+            
+            <form class="cooked-form" action="{% url 'cooked' %}" method="post">
+                {% csrf_token %}
+                <label for="portions">Portions:</label>
+                <input type="text" name="portions" value="{{ recipe.portions }}">
+                <input type="submit" value="Cooked!">
+            </form>
+        </div>
+    </div>
+    
+    <nav class="navbar">
+        <a href="{% url 'home' %}" class="nav-item">Home</a>
+        <a href="{% url 'create' %}" class="nav-item">Create</a>
+        <a href="{% url 'favorites' %}" class="nav-item">Favorites</a>
+        <a href="{% url 'choose' %}" class="nav-item">Choose</a>
+    </nav>
+    
+    <script>
+        // Toggle favorite
+        async function toggleFavorite(star, recipeId) {
+            try {
+                const response = await fetch(`/${recipeId}/favorite/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    star.classList.toggle('active');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+</html>

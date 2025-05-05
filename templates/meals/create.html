@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Create Meal</title>
+    <style>
+        :root {
+            --bg-color: #ffffff;
+            --card-color: #f8f9fa;
+            --text-color: #1c1c1e;
+            --accent-color: #007aff;
+            --shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+        
+        .container {
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+        
+        .navbar {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            background: white;
+            border-radius: 25px;
+            box-shadow: var(--shadow);
+            padding: 10px 15px;
+            z-index: 100;
+            width: 90%;
+            max-width: 400px;
+        }
+        
+        .nav-item {
+            padding: 10px 15px;
+            text-decoration: none;
+            color: var(--text-color);
+            flex: 1;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .nav-item.active {
+            color: var(--accent-color);
+            font-weight: 600;
+        }
+        
+        .form-card {
+            background: var(--card-color);
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: var(--shadow);
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            position: relative;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-family: inherit;
+        }
+        
+        textarea {
+            min-height: 150px;
+            resize: vertical;
+            padding-bottom: 40px; /* Space for button */
+        }
+        
+        .submit-btn, .generate-btn, .generate-ingredients-btn {
+            background-color: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            margin-top: 10px;
+        }
+        
+        .generate-btn {
+            background-color: #34c759; /* For Instructions */
+            width: auto;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+        }
+        
+        .generate-ingredients-btn {
+            background-color: #34c759; /* For ingredients */
+            width: auto;
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+        }
+        
+        .popup {
+            position: fixed;
+            top: -100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background-color: #34c759;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 8px;
+            z-index: 1000;
+            transition: top 0.5s ease-in-out;
+            font-size: 16px;
+        }
+        
+        .popup.show {
+            top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="popup" id="popup">Meal Saved</div>
+    
+    <div class="container">
+        <div class="form-card">
+            <h2>Create New Meal</h2>
+            <form method="post" action="{% url 'create' %}" id="create-meal-form">
+                {% csrf_token %}
+                <div class="form-group">
+                    <label for="title">Meal Name</label>
+                    <input type="text" id="title" name="title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label for="category">Category</label>
+                    <select id="category" name="category" required>
+                        <option value="" disabled selected>Select a category</option>
+                        {% for category in categories %}
+                            <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="ingredients">Ingredients</label>
+                    <textarea id="ingredients" name="ingredients" placeholder="e.g., 2 cups flour, 1 tsp salt" required></textarea>
+                    <button type="button" class="generate-ingredients-btn" onclick="generateIngredients()">Generate Ingredients</button>
+                </div>
+                
+                <div class="form-group">
+                    <label for="instructions">Instructions</label>
+                    <textarea id="instructions" name="instructions" required></textarea>
+                    <button type="button" class="generate-btn" onclick="generateInstructions()">Generate Instructions</button>
+                </div>
+                
+                <button type="submit" class="submit-btn">Save Meal</button>
+            </form>
+        </div>
+    </div>
+    
+    <nav class="navbar">
+        <a href="{% url 'home' %}" class="nav-item">Home</a>
+        <a href="{% url 'create' %}" class="nav-item active">Create</a>
+        <a href="{% url 'favorites' %}" class="nav-item">Favorites</a>
+        <a href="{% url 'choose' %}" class="nav-item">Choose</a>
+    </nav>
+    
+    <script>
+        async function generateInstructions() {
+            const mealName = document.getElementById('title').value;
+            const instructionsField = document.getElementById('instructions');
+            
+            if (!mealName) {
+                alert('Please enter a meal name first.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('{% url 'generate_instructions' %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: new URLSearchParams({ 'meal_name': mealName })
+                });
+                const data = await response.json();
+                if (data.instructions) {
+                    instructionsField.value = data.instructions;
+                } else {
+                    alert('Error generating instructions: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        async function generateIngredients() {
+            const mealName = document.getElementById('title').value;
+            const ingredientsField = document.getElementById('ingredients');
+            
+            if (!mealName) {
+                alert('Please enter a meal name first.');
+                return;
+            }
+            
+            try {
+                const response = await fetch('{% url 'generate_ingredients' %}', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded',
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    },
+                    body: new URLSearchParams({ 'meal_name': mealName })
+                });
+                const data = await response.json();
+                if (data.ingredients) {
+                    ingredientsField.value = data.ingredients;
+                } else {
+                    alert('Error generating ingredients: ' + data.error);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        }
+        
+        // Handle form submission and popup
+        document.getElementById('create-meal-form').addEventListener('submit', async function(event) {
+            event.preventDefault();
+            const form = this;
+            try {
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    body: new FormData(form),
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                });
+                const data = await response.json();
+                if (data.status === 'success') {
+                    const popup = document.getElementById('popup');
+                    popup.classList.add('show');
+                    setTimeout(() => {
+                        popup.classList.remove('show');
+                        window.location.href = '{% url 'home' %}'; // Redirect to homepage
+                    }, 2000);
+                } else {
+                    alert('Error saving meal: ' + data.message);
+                }
+            } catch (error) {
+                alert('Error: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>
